@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/iikira/Baidu-Login"
+	"github.com/qjfoidnh/Baidu-Login"
 	"os"
 )
 
