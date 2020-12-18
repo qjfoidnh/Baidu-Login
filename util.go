@@ -79,6 +79,7 @@ func (lj *LoginJSON) parsePhoneAndEmail(bc *BaiduClient) {
 func (lj *LoginJSON) parseCookies(targetURL, body string, jar *cookiejar.Jar) {
 	url, _ := url.Parse(targetURL)
 	tokenRegexp := regexp.MustCompile(`<bduss>([\w]+)</bduss><ptoken>([\w]+)</ptoken>.+<stoken>netdisk#([\w]+)</stoken>`)
+	fmt.Println(body)
 	params := tokenRegexp.FindStringSubmatch(body)
 	if len(params)==4 {
 		lj.Data.BDUSS = params[1]
