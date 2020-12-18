@@ -76,17 +76,25 @@ func (lj *LoginJSON) parsePhoneAndEmail(bc *BaiduClient) {
 }
 
 // parseCookies 解析 STOKEN, PTOKEN, BDUSS 并插入至 json 结构.
-func (lj *LoginJSON) parseCookies(targetURL string, jar *cookiejar.Jar) {
+func (lj *LoginJSON) parseCookies(targetURL, body string, jar *cookiejar.Jar) {
 	url, _ := url.Parse(targetURL)
-	cookies := jar.Cookies(url)
-	for _, cookie := range cookies {
-		switch cookie.Name {
-		case "BDUSS":
-			lj.Data.BDUSS = cookie.Value
-		case "PTOKEN":
-			lj.Data.PToken = cookie.Value
-		case "STOKEN":
-			lj.Data.SToken = cookie.Value
+	tokenRegexp := regexp.MustCompile(`<bduss>([\w]+)</bduss><ptoken>([\w]+)</ptoken>.+<stoken>netdisk#([\w]+)</stoken>`)
+	params := tokenRegexp.FindStringSubmatch(body)
+	if len(params)==4 {
+		lj.Data.BDUSS = params[1]
+		lj.Data.PToken = params[2]
+		lj.Data.SToken = params[3]
+	} else {
+		cookies := jar.Cookies(url)
+		for _, cookie := range cookies {
+			switch cookie.Name {
+			case "BDUSS":
+				lj.Data.BDUSS = cookie.Value
+			case "PTOKEN":
+				lj.Data.PToken = cookie.Value
+			case "STOKEN":
+				lj.Data.SToken = cookie.Value
+			}
 		}
 	}
 	lj.Data.CookieString = pcsutil.GetURLCookieString(targetURL, jar) // 插入 cookie 字串
