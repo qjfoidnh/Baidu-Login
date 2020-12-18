@@ -111,6 +111,7 @@ func (bc *BaiduClient) BaiduLogin(username, password, verifycode, vcodestr strin
 
 	switch lj.ErrInfo.No {
 	case "0":
+		fmt.Println(string(body))
 		lj.parseCookies("https://wappass.baidu.com", bc.Jar.(*cookiejar.Jar)) // 解析登录数据
 	case "400023", "400101": // 需要验证手机或邮箱
 		lj.parsePhoneAndEmail(bc)
