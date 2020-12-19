@@ -180,7 +180,7 @@ func (bc *BaiduClient) VerifyCode(verifyType, token, vcode, u string) (lj *Login
 		return
 	}
 
-	lj.parseCookies(u, "", bc.Jar.(*cookiejar.Jar))
+	lj.parseCookies(u, string(body), bc.Jar.(*cookiejar.Jar))
 	return lj
 }
 
