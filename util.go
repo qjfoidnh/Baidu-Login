@@ -80,6 +80,9 @@ func (lj *LoginJSON) parseCookies(targetURL, body string, jar *cookiejar.Jar) {
 	url, _ := url.Parse(targetURL)
 	tokenRegexp := regexp.MustCompile(`<bduss>(.+)</bduss><ptoken>([a-z0-9A-Z\-]+)</ptoken>.+<stoken>netdisk#([a-z0-9A-Z\-]+)</stoken>`)
 	params := tokenRegexp.FindStringSubmatch(body)
+	fmt.Println(body)
+	fmt.Println(len(params))
+	fmt.Println(params)
 	if len(params)==4 {
 		lj.Data.BDUSS = params[1]
 		lj.Data.PToken = params[2]
