@@ -78,8 +78,7 @@ func (lj *LoginJSON) parsePhoneAndEmail(bc *BaiduClient) {
 // parseCookies 解析 STOKEN, PTOKEN, BDUSS 并插入至 json 结构.
 func (lj *LoginJSON) parseCookies(targetURL, body string, jar *cookiejar.Jar) {
 	url, _ := url.Parse(targetURL)
-	tokenRegexp := regexp.MustCompile(`<bduss>([\w]+)</bduss><ptoken>([\w]+)</ptoken>.+<stoken>netdisk#([\w]+)</stoken>`)
-	fmt.Println(body)
+	tokenRegexp := regexp.MustCompile(`<bduss>(.+)</bduss><ptoken>([a-z0-9A-Z\-]+)</ptoken>.+<stoken>netdisk#([a-z0-9A-Z\-]+)</stoken>`)
 	params := tokenRegexp.FindStringSubmatch(body)
 	if len(params)==4 {
 		lj.Data.BDUSS = params[1]
