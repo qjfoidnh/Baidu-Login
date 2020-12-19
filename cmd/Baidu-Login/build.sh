@@ -49,7 +49,7 @@ Pack() {
 
 # rice 打包静态资源
 RicePack() {
-    rice -i github.com/iikira/Baidu-Login append --exec "$output/$1/$2"
+    rice -i github.com/qjfoidnh/Baidu-Login append --exec "$output/$1/$2"
 }
 
 # Android
