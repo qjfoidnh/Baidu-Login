@@ -80,9 +80,6 @@ func (lj *LoginJSON) parseCookies(targetURL, body string, jar *cookiejar.Jar) {
 	url, _ := url.Parse(targetURL)
 	tokenRegexp := regexp.MustCompile(`<stoken>netdisk#([a-z0-9A-Z\-]+)<`)
 	params := tokenRegexp.FindStringSubmatch(body)
-	fmt.Println(body)
-	fmt.Println(len(params))
-	fmt.Println(params)
 	cookies := jar.Cookies(url)
 	for _, cookie := range cookies {
 		switch cookie.Name {
