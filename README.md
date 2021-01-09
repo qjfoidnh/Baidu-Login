@@ -1,4 +1,4 @@
-# 百度BDUSS获取工具 v1.3.9 Go语言
+# 百度BDUSS获取工具 v1.4.0 Go语言
 [![GoDoc](https://godoc.org/github.com/iikira/Baidu-Login?status.svg)](https://godoc.org/github.com/qjfoidnh/Baidu-Login)
 
 ## 功能
@@ -7,7 +7,11 @@
 
 百度: 获取百度帐号 BDUSS, PTOKEN, 百度网盘STOKEN 值
 
-百度: 支持在线 手机／邮箱 安全验证（beta）
+百度: 支持在线 手机／邮箱 安全验证
+
+## 注意
+
+目前该程序仅作为 BaiduPCS-Go 的登录模块, 不支持独立启动
 
 ## 如何使用
 

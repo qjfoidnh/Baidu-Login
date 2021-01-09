@@ -12,6 +12,7 @@ import (
 	"net/url"
 )
 
+// 该模块目前已无法使用
 // StartServer 启动 http 服务
 func StartServer(port string) {
 	templateFilesBox = rice.MustFindBox("http-files/template")
@@ -102,7 +103,7 @@ func sendCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := bc.SendCodeToUser(verifyType, token)
+	msg := bc.SendCodeToUser(verifyType, token, "none")
 	w.Write([]byte(`{"msg": "` + msg + `"}`))
 }
 
@@ -122,7 +123,8 @@ func execVerify(w http.ResponseWriter, r *http.Request) {
 	vcode := r.Form.Get("vcode")     // email/mobile 收到的验证码
 	u := r.Form.Get("u")
 
-	lj := bc.VerifyCode(verifyType, token, vcode, u)
+	// 此处传入的参数是错误的
+	lj := bc.VerifyCode(verifyType, token, vcode, u, "", "")
 
 	// 输出 json 编码
 	byteBody, _ := jsoniter.MarshalIndent(&lj, "", " ")

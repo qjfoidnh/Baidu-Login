@@ -2,6 +2,8 @@ package baidulogin
 
 import (
 	"bytes"
+	"encoding/json"
+	//"bytes"
 	"fmt"
 	"github.com/qjfoidnh/Baidu-Login/bdcrypto"
 	"github.com/qjfoidnh/BaiduPCS-Go/requester"
@@ -34,8 +36,11 @@ type LoginJSON struct {
 		Token        string `json:"token"`
 		U            string `json:"u"`
 		AuthSID      string `json:"authsid"`
+		AuthID       string `json:"authid"`
 		Phone        string `json:"phone"`
 		Email        string `json:"email"`
+		VerifyURL    string `json:"verifyUrl"`
+		LoginProxy   string `json:"loginProxy"`
 		BDUSS        string `json:"bduss"`
 		PToken       string `json:"ptoken"`
 		SToken       string `json:"stoken"`
@@ -53,6 +58,12 @@ func NewBaiduClinet() *BaiduClient {
 	bc.getBaiduRSAPublicKeyModulus() //
 	bc.getTraceID()
 	return bc
+}
+
+func (bc *BaiduClient) ReFreshClient() {
+	bc.getServerTime()               // 访问一次百度页面，以初始化百度的 Cookie
+	bc.getBaiduRSAPublicKeyModulus() //
+	bc.getTraceID()
 }
 
 // BaiduLogin 发送 百度登录请求
@@ -121,7 +132,43 @@ func (bc *BaiduClient) BaiduLogin(username, password, verifycode, vcodestr strin
 }
 
 // SendCodeToUser 发送验证码到 手机/邮箱
-func (bc *BaiduClient) SendCodeToUser(verifyType, token string) (msg string) {
+func (bc *BaiduClient) SendCodeToUser(verifyType, verifyURL, authID string) (msg string) {
+	header := map[string]string{
+		"Referer":       verifyURL,
+		"Connection":    "keep-alive",
+		"Content-Type": "application/json",
+	}
+	type inner_type map[string]string
+	authparams := inner_type{"banktype":"","type":"vcode","secret":"",}
+
+	post := map[string]interface{}{
+		"tpl":"wi",
+		"client":"",
+		"clientfrom":"",
+		"authid":authID,
+		"authField":verifyType,
+		"authType":"check",
+		"action":"send",
+		"authParams":authparams,
+	}
+	jsonstr, err := json.Marshal(post)
+	url := "https://wappass.baidu.com/v3/api/auth/widget"
+	body, err := bc.Fetch("POST", url, bytes.NewBuffer(jsonstr), header)
+	if err != nil {
+		return "系统出错: " + err.Error()
+	}
+
+	rawMsg := regexp.MustCompile(`"send"\:"([\w]+)","status"\:"unauth"`).FindSubmatch(body)
+	if len(rawMsg) >= 1 {
+		return string(rawMsg[1])
+	} else {
+		return "系统出错: 请稍后重试"
+	}
+
+}
+
+// SendCodeToUser 发送验证码到 手机/邮箱(另一套逻辑)
+func (bc *BaiduClient) SendCodeToUser2(verifyType, token string) (msg string) {
 	header := map[string]string{
 		"Referer": "https://wappass.baidu.com/",
 	}
@@ -132,7 +179,7 @@ func (bc *BaiduClient) SendCodeToUser(verifyType, token string) (msg string) {
 	}
 
 	rawMsg := regexp.MustCompile(`<p class="mod-tipinfo-subtitle">\s+(.*?)\s+</p>`).FindSubmatch(body)
-	if len(rawMsg) >= 1 {
+	if len(rawMsg) > 1 {
 		return string(rawMsg[1])
 	}
 
@@ -140,7 +187,65 @@ func (bc *BaiduClient) SendCodeToUser(verifyType, token string) (msg string) {
 }
 
 // VerifyCode 输入 手机/邮箱 收到的验证码, 验证登录
-func (bc *BaiduClient) VerifyCode(verifyType, token, vcode, u string) (lj *LoginJSON) {
+func (bc *BaiduClient) VerifyCode(vcode, verifyType, verifyURL, authID, loginProxy, authSid string) (lj *LoginJSON) {
+	header := map[string]string{
+		"Referer":       verifyURL + fmt.Sprintf("&pageType=%s", verifyType),
+		"Connection":    "keep-alive",
+		"Host":          "wappass.baidu.com",
+		"Content-Type":  "application/json",
+	}
+	type inner_type map[string]string
+	authparams := inner_type{"banktype":"","type":"vcode", "vcode":vcode, "secret":"",}
+	post := map[string]interface{}{
+		"tpl":"wi",
+		"client":"",
+		"clientfrom":"",
+		"authid":authID,
+		"authField":verifyType,
+		"authType":"check",
+		"action":"check",
+		"authParams":authparams,
+	}
+	lj = &LoginJSON{}
+	lj.ErrInfo.No = "0"
+	jsonstr, _ := json.Marshal(post)
+	url := "https://wappass.baidu.com/v3/api/auth/widget"
+	body, err := bc.Fetch("POST", url, bytes.NewBuffer(jsonstr), header)
+	if err != nil {
+		lj.ErrInfo.Msg = "提交手机/邮箱验证码请求错误: " + err.Error()
+		lj.ErrInfo.No = "-1"
+		return
+	}
+	rawMsg := regexp.MustCompile(`{"check"\:"([\w]+)","status"\:"([\w]+)"`).FindSubmatch(body)
+	if len(rawMsg) < 2 {
+		lj.ErrInfo.Msg = "提交手机/邮箱验证码错误: 验证码错误"
+		lj.ErrInfo.No = "-2"
+		return
+	}
+	if string(rawMsg[1]) != "success" || string(rawMsg[2]) != "authed" {
+		lj.ErrInfo.Msg = "提交手机/邮箱验证码错误: 未通过验证"
+		lj.ErrInfo.No = "-2"
+		return
+	}
+	url = fmt.Sprintf("%s&authsid=%s&fromtype=%s&bindToSmsLogin=", loginProxy, authSid, verifyType)
+	body, err = bc.Fetch("GET", url, nil, map[string]string{
+		"Connection":                "keep-alive",
+		"Host":                      "wappass.baidu.com",
+		"Pragma":                    "no-cache",
+		"Referer":                   "https://wappass.baidu.com/",
+		"Upgrade-Insecure-Requests": "1",
+	})
+	if err != nil {
+		lj.ErrInfo.No = "-2"
+		lj.ErrInfo.Msg = "提交手机/邮箱验证码错误: " + err.Error()
+		return
+	}
+	lj.parseCookies(url, string(body), bc.Jar.(*cookiejar.Jar))
+	return
+}
+
+// VerifyCode 输入 手机/邮箱 收到的验证码, 验证登录(另一套逻辑)
+func (bc *BaiduClient) VerifyCode2(verifyType, token, vcode, u string) (lj *LoginJSON) {
 	lj = &LoginJSON{}
 	header := map[string]string{
 		"Connection":                "keep-alive",
@@ -183,6 +288,7 @@ func (bc *BaiduClient) VerifyCode(verifyType, token, vcode, u string) (lj *Login
 	lj.parseCookies(u, string(body), bc.Jar.(*cookiejar.Jar))
 	return lj
 }
+
 
 // getTraceID 获取百度 Trace-Id
 func (bc *BaiduClient) getTraceID() {
